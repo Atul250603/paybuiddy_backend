@@ -24,13 +24,7 @@ try {
         password:hash
     })
     await user.save();
-    const data={
-        user:{
-            id:user.id
-        }
-    }
-    var token=jwt.sign(data,JWT_SIGN);
-    res.json({token});
+    res.json({success:"Successfully Registered"});
 } catch (error) {
     res.status(401).json({erros:error});
 }
@@ -52,11 +46,12 @@ router.post('/login',[body('email').isEmail(),body('password').isLength({ min: 5
       }
       const data={
           user:{
-              id:user.id
+              id:user.id,
+              email:req.body.email
           }
       };
       const token=jwt.sign(data,JWT_SIGN);
-      res.json({token});
+      res.json({success:"Logged In Successfully",token});
         
     } catch (error) {
         res.status(401).json({errors:error});

@@ -11,14 +11,14 @@ const Transaction=require('../models/Transact');
 router.post('/topay',fetchuser,async(req,res)=>{
     try {
         let nextuser=await User.findOne({email:req.body.email});
-        if(!nextuser){
+        if(!nextuser  || (req.body.email===req.user.email)){
             return res.status(401).json({errors:"Enter the valid email"});
         }
         let transact=await Transaction.find({user:req.user.id,nextUser:nextuser.id});
         if(transact.length!=0){
             transact[0].amount=transact[0].amount+Number(req.body.amount);
             await transact[0].save();
-            res.json({transact});
+            res.json({success:"Successfully Added The Transaction",transact});
         }
         else{
          let newtransact=await new Transaction({
@@ -29,7 +29,7 @@ router.post('/topay',fetchuser,async(req,res)=>{
             status:"topay"
         });
         await newtransact.save();
-        res.json({transact:newtransact});
+        res.json({success:"Successfully Added The Transaction",transact:newtransact});
     }
 
     } catch (error) {
@@ -67,7 +67,7 @@ router.post('/paid',fetchuser,async(req,res)=>{
             transact.amount=transact.amount-Number(req.body.amount);
             await transact.save();
         }
-        res.json({transact});
+        res.json({success:"Paid Successfully",transact});
         
     } catch (error) {
         res.status(401).json({errors:error});
@@ -79,7 +79,7 @@ router.post('/fetchalltransact',fetchuser,async(req,res)=>{
         if(!transact){
             return res.status(401).json({errors:"No transactions"})
         }
-        res.json(transact);
+        res.json(transact); 
     } catch (error) {
         return res.status(401).json({errors:error})
     }

@@ -8,27 +8,32 @@ const JWT_SIGN=process.env.SECRETKEY;
 const fetchuser=require('../middleware/fetchuser');
 const req = require('express/lib/request');
 const Transaction=require('../models/Transact');
-router.post('/topay',fetchuser,async(req,res)=>{
+
+//transaction looks like user has to pay next user
+router.post('/createtotake',fetchuser,async(req,res)=>{
     try {
-        let nextuser=await User.findOne({email:req.body.email});
-        if(!nextuser  || (req.body.email===req.user.email)){
+        
+        let user=await User.findOne({email:req.body.email});
+    
+        if(!user  || (req.body.email===req.user.email)){
             return res.status(401).json({errors:"Enter the valid email"});
         }
-        let transact=await Transaction.find({user:req.user.id,nextUser:nextuser.id});
+        let transact=await Transaction.find({nextUser:req.user.id,user:user._id}).populate('user');
+
         if(transact.length!=0){
             transact[0].amount=transact[0].amount+Number(req.body.amount);
             await transact[0].save();
-            res.json({success:"Successfully Added The Transaction",transact});
+            res.json({success:"Successfully Added The Transaction",transact:transact[0]});
         }
         else{
          let newtransact=await new Transaction({
-            user:req.user.id,
-            nextUser:nextuser.id,
-            nextUserName:nextuser.name,
+            user:user._id,
+            nextUser:req.user.id,
             amount:req.body.amount,
             status:"topay"
         });
         await newtransact.save();
+        newtransact.user=user;
         res.json({success:"Successfully Added The Transaction",transact:newtransact});
     }
 
@@ -38,7 +43,9 @@ router.post('/topay',fetchuser,async(req,res)=>{
 });
 router.post('/totake',fetchuser,async(req,res)=>{
     try {
-        let transact=await Transaction.find({nextUser:req.user.id,status:"topay"});
+        
+        let transact=await Transaction.find({nextUser:req.user.id,status:"topay"}).populate('user');
+        
         if(!transact){
             return res.status(401).json({errors:"No Transaction Yet"});
         }
@@ -73,15 +80,36 @@ router.post('/paid',fetchuser,async(req,res)=>{
         res.status(401).json({errors:error});
     }
 })
-router.post('/fetchalltransact',fetchuser,async(req,res)=>{
+router.post('/fetchalltransact',fetchuser,async(req,res)=>{ //this fetches all transacations of the user
     try {
-        let transact=await Transaction.find({user:req.user.id});
+        
+        let transact=await Transaction.find({user:req.user.id}).populate('nextUser');
         if(!transact){
             return res.status(401).json({errors:"No transactions"})
         }
         res.json(transact); 
     } catch (error) {
         return res.status(401).json({errors:error})
+    }
+})
+
+router.get('/fetchamount',fetchuser,async(req,res)=>{
+    try{
+        const uid=req.user.id;
+        let Taketransact=await Transaction.find({nextUser:uid});
+        let Paytransact=await Transaction.find({user:uid});
+        let takeamount=0;
+        let payamount=0;
+        Taketransact.forEach((element)=>{
+            takeamount+=element.amount;
+        })
+        Paytransact.forEach((element)=>{
+            payamount+=element.amount;
+        })
+        res.json({takeamount,payamount});
+    }
+    catch(error){
+        res.json({errors:"Some Error Occured"});    
     }
 })
 module.exports=router;

@@ -10,10 +10,6 @@ const Transact = new Schema({
     type:mongoose.Schema.Types.ObjectId,
     ref:'user'
   },
-  nextUserName:{
-      type:"String",
-      required:true
-  },
   amount:{
       type:Number,
       required:true
